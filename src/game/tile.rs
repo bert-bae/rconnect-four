@@ -1,11 +1,11 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TileState {
     Empty,
     P1,
     P2
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tile {
    pub state: TileState
 }

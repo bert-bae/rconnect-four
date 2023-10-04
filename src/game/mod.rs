@@ -5,6 +5,17 @@ use crate::game::tile::{Tile, TileState};
 use colored::{ColoredString, Colorize};
 use std::fmt::{self, Write};
 use std::io::{stdin, stdout};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+enum GameError {
+    #[error("Invalid move. Select a column between 1 - {0}.")]
+    OutOfBound(u8),
+    #[error("Invalid move. The column is full. Please select an empty column.")]
+    MoveLimited(),
+    #[error("Invalid board size. Please select a number between 6 - 12")]
+    BoardSizeLimit(),
+}
 
 #[derive(Debug)]
 pub struct Game {
@@ -35,7 +46,10 @@ impl Game {
 
             let mut column = String::new();
             stdin().read_line(&mut column).unwrap();
-            self.select(column.trim().parse().unwrap(), state);
+
+            // Convert user input to indexed column
+            let parsed = column.trim().parse::<usize>().unwrap() - 1;
+            self.select(parsed, state);
             self.draw().unwrap();
         }
     }
@@ -130,22 +144,24 @@ impl Game {
         };
     }
 
-    fn select(&mut self, column: usize, state: TileState) {
+    fn select(&mut self, column: usize, state: TileState) -> Result<(), GameError> {
         let mutable_board = self.board.as_mut().unwrap();
-        match mutable_board.get_mut(column - 1) {
-            Some(row) => {
-                let position = row.iter().position(|t| t.state == TileState::Empty);
-                if position.is_none() {
-                    println!(
-                        "Invalid selection at column {column}. This column as no more empty slots."
-                    );
-                } else {
-                    row[position.unwrap()].set_state(state);
+        let board_size = mutable_board.len();
+        if column > board_size {
+            return Err(GameError::OutOfBound(board_size as u8));
+        }
+
+        for row in mutable_board.iter_mut().rev() {
+            let t = row.get_mut(column);
+
+            if t.is_some() {
+                let val: &mut Tile = t.unwrap();
+                if &val.state == &TileState::Empty {
+                    val.set_state(state);
+                    return Ok(());
                 }
             }
-            None => {
-                println!("Invalid column {column}");
-            }
         }
+        return Err(GameError::MoveLimited());
     }
 }

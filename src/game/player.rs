@@ -1,12 +1,10 @@
 #[derive(Debug)]
 pub struct Player {
-    name: String,
+    pub name: String,
 }
 
 impl Player {
     pub fn new(name: String) -> Self {
-        Player {
-            name,
-        }
+        Player { name }
     }
 }

@@ -188,10 +188,7 @@ impl Game {
         return Err(GameError::MoveLimited());
     }
 
-    fn validate(&self) -> bool {
-        let (_, state) = self.get_current_player();
-        // Horizontal check
-
+    fn validate_straight(&self, state: TileState) -> bool {
         let mut hoz_counter = 0;
         for row in self.board.as_ref().unwrap() {
             for tile in row {
@@ -206,7 +203,7 @@ impl Game {
                 }
             }
         }
-        
+
         let mut ver_counter = 0;
         for column in 0..self.board_size.unwrap() {
             for row in self.board.as_ref().unwrap() {
@@ -217,11 +214,80 @@ impl Game {
                     ver_counter = 0
                 }
 
-                if ver_counter == 4{
-                    return true
+                if ver_counter == 4 {
+                    return true;
                 }
             }
         }
         return false;
+    }
+
+    fn validate_diagonal(&self, state: TileState) -> bool {
+        let size = self.board_size.unwrap();
+        for row in 0..(size - 3) {
+            for column in 0..(size - 3) {
+                let tiles = self.get_four_diagonal_tile_states(true, row, column);
+                if tiles.iter().all(|s| s == &state) {
+                    return true;
+                }
+            }
+        }
+
+        for row in 3..size {
+            for column in 0..(size - 3) {
+
+                let tiles = self.get_four_diagonal_tile_states(false, row, column);
+                if tiles.iter().all(|s| s == &state) {
+                    return true;
+                }
+            }
+
+        }
+
+        return false;
+    }
+
+    fn validate(&self) -> bool {
+        let (_, state) = &self.get_current_player();
+        let straight_check = self.validate_straight(state.clone());
+        let diagonal_check = self.validate_diagonal(state.clone());
+        return straight_check || diagonal_check;
+    }
+
+    fn get_four_diagonal_tile_states(
+        &self,
+        anti: bool,
+        r_start: usize,
+        c_start: usize,
+    ) -> [TileState; 4] {
+        let t1: TileState = self.get_tile_state(r_start, c_start);
+        let t2: TileState;
+        let t3: TileState;
+        let t4: TileState;
+        if anti {
+            t2 = self.get_tile_state(r_start + 1, c_start + 1);
+            t3 = self.get_tile_state(r_start + 2, c_start + 2);
+            t4 = self.get_tile_state(r_start + 3, c_start + 3);
+        } else {
+            t2 = self.get_tile_state(r_start - 1, c_start + 1);
+            t3 = self.get_tile_state(r_start - 2, c_start + 2);
+            t4 = self.get_tile_state(r_start - 3, c_start + 3);
+        }
+
+        return [t1, t2, t3, t4];
+    }
+
+    fn get_tile_state(&self, row: usize, column: usize) -> TileState {
+        let board = self.board.as_ref().unwrap();
+        let tile = match board.get(row) {
+            Some(r) => r.get(column),
+            None => return TileState::Empty,
+        };
+
+        if tile.is_none() {
+            return TileState::Empty;
+        }
+
+        return tile.unwrap().state;
     }
 }

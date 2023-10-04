@@ -1,19 +1,19 @@
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TileState {
     Empty,
     P1,
-    P2
+    P2,
 }
 
 #[derive(Debug, Clone)]
 pub struct Tile {
-   pub state: TileState
+    pub state: TileState,
 }
 
 impl Tile {
     pub fn new() -> Self {
         Tile {
-            state: TileState::Empty
+            state: TileState::Empty,
         }
     }
 

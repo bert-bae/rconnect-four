@@ -44,7 +44,7 @@ impl Game {
         let mut end = false;
         while !end {
             let (player_name, state) = self.get_current_player();
-            println!("{}", format!("It is {}'s turn", player_name).blue());
+            println!("{}", format!("It is {}'s turn", &player_name).blue());
 
             let mut column = String::new();
             stdin().read_line(&mut column).unwrap();
@@ -71,7 +71,7 @@ impl Game {
                     let win = self.validate();
                     if win {
                         end = true;
-                        println!("Player {} is the winner!", "todo")
+                        println!("Player {} is the winner!", &player_name);
                     } else {
                         self.switch();
                     }
@@ -171,11 +171,17 @@ impl Game {
         self.next = next;
     }
 
-    fn get_current_player(&self) -> (&str, TileState) {
+    fn get_current_player(&self) -> (String, TileState) {
         if self.next == 0 {
-            return (&self.players.0.as_ref().unwrap().name, TileState::P1);
+            return (
+                self.players.0.as_ref().unwrap().name.to_owned().to_string(),
+                TileState::P1,
+            );
         } else {
-            return (&self.players.1.as_ref().unwrap().name, TileState::P2);
+            return (
+                self.players.1.as_ref().unwrap().name.to_owned().to_string(),
+                TileState::P2,
+            );
         };
     }
 
@@ -240,7 +246,7 @@ impl Game {
                 let check = self.check_diagonal_win(true, state, row, column);
                 if check {
                     return true;
-                } 
+                }
             }
         }
 

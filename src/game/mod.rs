@@ -10,7 +10,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 enum GameError {
     #[error("Invalid move. Select a column between 1 - {0}.")]
-    OutOfBound(u8),
+    OutOfBound(usize),
     #[error("Invalid move. The column is full. Please select an empty column.")]
     MoveLimited(),
     #[error("Invalid board size. Please select a number between 6 - 12")]
@@ -21,6 +21,7 @@ enum GameError {
 pub struct Game {
     pub players: (Option<Player>, Option<Player>),
     pub board: Option<Vec<Vec<Tile>>>,
+    pub board_size: Option<usize>,
     pub next: u8,
 }
 
@@ -29,6 +30,7 @@ impl Game {
         Game {
             players: (None, None),
             board: None,
+            board_size: None,
             next: 0,
         }
     }
@@ -41,46 +43,58 @@ impl Game {
 
         let mut end = false;
         while !end {
-            let (player_name, state) = self.switch();
+            let (player_name, state) = self.get_next_player();
             println!("It is {}'s turn", player_name);
 
             let mut column = String::new();
             stdin().read_line(&mut column).unwrap();
 
             // Convert user input to indexed column
-            let parsed = column.trim().parse::<usize>().unwrap() - 1;
-            self.select(parsed, state);
+            let parsed = column.trim().parse::<usize>().unwrap();
+            if parsed <= 0 {
+                println!("{}", GameError::OutOfBound(self.board_size.unwrap()));
+                continue;
+            }
+            match self.select(parsed - 1, state) {
+                Ok(_) => self.switch(),
+                Err(e) => {
+                    println!("{e}");
+                    self.switch();
+                }
+            }
             self.draw().unwrap();
         }
     }
 
     fn set_board(&mut self) {
-        let mut size = String::new();
-        println!(
-            "{}",
-            "How large do you want your board to be?".to_string().blue()
-        );
-        stdin().read_line(&mut size).unwrap();
+        let mut set = false;
+        while !set {
+            let mut size = String::new();
+            println!(
+                "{}",
+                "How large do you want your board to be?".to_string().blue()
+            );
+            stdin().read_line(&mut size).unwrap();
 
-        match size.trim().parse::<usize>() {
-            Ok(num) => {
-                if num < 6 || num > 12 {
-                    println!(
-                        "{}",
-                        "Please enter a number between 6 - 12".to_string().red()
-                    );
-                    self.set_board();
-                }
-                let mut grid: Vec<Vec<Tile>> = vec![];
-                for _ in 0..num {
-                    grid.push(vec![Tile::new(); num]);
-                }
-                self.board = Some(grid);
+            let size = size.trim().parse::<usize>();
+            if size.is_err() {
+                println!("{}", GameError::BoardSizeLimit());
+                continue;
             }
-            Err(_) => {
-                println!("{}", "Please enter a valid number".to_string().red());
-                self.set_board();
+
+            let num = size.unwrap();
+            if num < 6 || num > 12 {
+                println!("{}", GameError::BoardSizeLimit());
+                continue;
             }
+
+            let mut grid: Vec<Vec<Tile>> = vec![];
+            for _ in 0..num {
+                grid.push(vec![Tile::new(); num]);
+            }
+            self.board = Some(grid);
+            self.board_size = Some(num);
+            set = true;
         }
     }
 
@@ -99,7 +113,7 @@ impl Game {
     fn draw(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut buffer = String::new();
         let tile_width = 3;
-        let board_size = self.board.as_ref().unwrap().len();
+        let board_size = self.board_size.unwrap();
         let grid_width = board_size * (tile_width + 1);
         writeln!(&mut buffer, "-{:-^grid_width$}", "")?;
         for row in self.board.as_ref().unwrap() {
@@ -134,10 +148,13 @@ impl Game {
         return Ok(());
     }
 
-    fn switch(&mut self) -> (&str, TileState) {
+    fn switch(&mut self) {
         let next = if self.next == 0 { 1 } else { 0 };
         self.next = next;
-        if next == 1 {
+    }
+
+    fn get_next_player(&mut self) -> (&str, TileState) {
+        if self.next == 1 {
             return (&self.players.0.as_ref().unwrap().name, TileState::P1);
         } else {
             return (&self.players.1.as_ref().unwrap().name, TileState::P2);
@@ -146,9 +163,8 @@ impl Game {
 
     fn select(&mut self, column: usize, state: TileState) -> Result<(), GameError> {
         let mutable_board = self.board.as_mut().unwrap();
-        let board_size = mutable_board.len();
-        if column > board_size {
-            return Err(GameError::OutOfBound(board_size as u8));
+        if column > self.board_size.unwrap() {
+            return Err(GameError::OutOfBound(self.board_size.unwrap()));
         }
 
         for row in mutable_board.iter_mut().rev() {

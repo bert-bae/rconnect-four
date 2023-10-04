@@ -3,8 +3,8 @@ mod tile;
 use crate::game::player::Player;
 use crate::game::tile::{Tile, TileState};
 use colored::{ColoredString, Colorize};
-use std::fmt::{self, Write};
-use std::io::{stdin, stdout};
+use std::fmt::Write;
+use std::io::stdin;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -43,7 +43,7 @@ impl Game {
 
         let mut end = false;
         while !end {
-            let (player_name, state) = self.get_next_player();
+            let (player_name, state) = self.get_current_player();
             println!("It is {}'s turn", player_name);
 
             let mut column = String::new();
@@ -56,10 +56,17 @@ impl Game {
                 continue;
             }
             match self.select(parsed - 1, state) {
-                Ok(_) => self.switch(),
+                Ok(_) => {
+                    let win = self.validate();
+                    if win {
+                        end = true;
+                        println!("Player {} is the winner!", "todo")
+                    } else {
+                        self.switch();
+                    }
+                }
                 Err(e) => {
                     println!("{e}");
-                    self.switch();
                 }
             }
             self.draw().unwrap();
@@ -153,8 +160,8 @@ impl Game {
         self.next = next;
     }
 
-    fn get_next_player(&mut self) -> (&str, TileState) {
-        if self.next == 1 {
+    fn get_current_player(&self) -> (&str, TileState) {
+        if self.next == 0 {
             return (&self.players.0.as_ref().unwrap().name, TileState::P1);
         } else {
             return (&self.players.1.as_ref().unwrap().name, TileState::P2);
@@ -179,5 +186,42 @@ impl Game {
             }
         }
         return Err(GameError::MoveLimited());
+    }
+
+    fn validate(&self) -> bool {
+        let (_, state) = self.get_current_player();
+        // Horizontal check
+
+        let mut hoz_counter = 0;
+        for row in self.board.as_ref().unwrap() {
+            for tile in row {
+                if tile.state == state {
+                    hoz_counter += 1;
+                } else {
+                    hoz_counter = 0;
+                }
+
+                if hoz_counter == 4 {
+                    return true;
+                }
+            }
+        }
+        
+        let mut ver_counter = 0;
+        for column in 0..self.board_size.unwrap() {
+            for row in self.board.as_ref().unwrap() {
+                let tile = row.get(column).unwrap();
+                if tile.state == state {
+                    ver_counter += 1;
+                } else {
+                    ver_counter = 0
+                }
+
+                if ver_counter == 4{
+                    return true
+                }
+            }
+        }
+        return false;
     }
 }

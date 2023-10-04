@@ -44,18 +44,29 @@ impl Game {
         let mut end = false;
         while !end {
             let (player_name, state) = self.get_current_player();
-            println!("It is {}'s turn", player_name);
+            println!("{}", format!("It is {}'s turn", player_name).blue());
 
             let mut column = String::new();
             stdin().read_line(&mut column).unwrap();
 
             // Convert user input to indexed column
-            let parsed = column.trim().parse::<usize>().unwrap();
-            if parsed <= 0 {
-                println!("{}", GameError::OutOfBound(self.board_size.unwrap()));
-                continue;
+            let parsed = column.trim().parse::<usize>();
+            let value;
+            match parsed {
+                Ok(val) => {
+                    if val <= 0 || val > self.board_size.unwrap() {
+                        println!("{}", GameError::OutOfBound(self.board_size.unwrap()));
+                        continue;
+                    }
+
+                    value = val;
+                }
+                Err(_) => {
+                    println!("{}", GameError::OutOfBound(self.board_size.unwrap()));
+                    continue;
+                }
             }
-            match self.select(parsed - 1, state) {
+            match self.select(value - 1, state) {
                 Ok(_) => {
                     let win = self.validate();
                     if win {
@@ -66,7 +77,7 @@ impl Game {
                     }
                 }
                 Err(e) => {
-                    println!("{e}");
+                    println!("{}", e.to_string().red());
                 }
             }
             self.draw().unwrap();

@@ -226,22 +226,20 @@ impl Game {
         let size = self.board_size.unwrap();
         for row in 0..(size - 3) {
             for column in 0..(size - 3) {
-                let tiles = self.get_four_diagonal_tile_states(true, row, column);
-                if tiles.iter().all(|s| s == &state) {
+                let check = self.check_diagonal_win(true, state, row, column);
+                if check {
                     return true;
-                }
+                } 
             }
         }
 
         for row in 3..size {
             for column in 0..(size - 3) {
-
-                let tiles = self.get_four_diagonal_tile_states(false, row, column);
-                if tiles.iter().all(|s| s == &state) {
+                let check = self.check_diagonal_win(false, state, row, column);
+                if check {
                     return true;
                 }
             }
-
         }
 
         return false;
@@ -254,12 +252,13 @@ impl Game {
         return straight_check || diagonal_check;
     }
 
-    fn get_four_diagonal_tile_states(
+    fn check_diagonal_win(
         &self,
         anti: bool,
+        state: TileState,
         r_start: usize,
         c_start: usize,
-    ) -> [TileState; 4] {
+    ) -> bool {
         let t1: TileState = self.get_tile_state(r_start, c_start);
         let t2: TileState;
         let t3: TileState;
@@ -274,7 +273,7 @@ impl Game {
             t4 = self.get_tile_state(r_start - 3, c_start + 3);
         }
 
-        return [t1, t2, t3, t4];
+        return [t1, t2, t3, t4].iter().all(|t| t == &state);
     }
 
     fn get_tile_state(&self, row: usize, column: usize) -> TileState {
